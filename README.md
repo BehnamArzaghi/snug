@@ -62,7 +62,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Not deployed yet so open [http://localhost:3000](http://localhost:3000) with your browser to see the result 🙃
 
 ## Development Process
 
