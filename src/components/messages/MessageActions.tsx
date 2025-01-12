@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MoreVertical, Pencil, Trash2, Reply } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -7,7 +7,6 @@ import type { Database } from '@/lib/database.types';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Lock, Shield } from 'lucide-react';
 import { useChannelOperations } from '@/hooks/useChannel';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 

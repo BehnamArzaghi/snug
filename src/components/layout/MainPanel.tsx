@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { MessageList } from '@/components/messages/MessageList';
 import { useMessageOperations } from '@/hooks/useMessageOperations';
 import { toast } from 'sonner';
+import Image from 'next/image';
 
 interface MainPanelProps {
   children?: ReactNode;
@@ -15,27 +16,6 @@ interface MainPanelProps {
 
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-// Sanitize filename to remove special characters and spaces
-const sanitizeFileName = (fileName: string): string => {
-  const sanitized = fileName
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[·]/g, '-')
-    .replace(/[^a-zA-Z0-9.-]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  
-  const MAX_LENGTH = 100;
-  const extension = sanitized.split('.').pop() || '';
-  const nameWithoutExt = sanitized.slice(0, sanitized.lastIndexOf('.'));
-  
-  if (sanitized.length > MAX_LENGTH) {
-    return `${nameWithoutExt.slice(0, MAX_LENGTH - extension.length - 1)}.${extension}`;
-  }
-  
-  return sanitized;
-};
 
 export function MainPanel({ children, isLoading, channelId }: MainPanelProps) {
   const { user } = useAuth();
@@ -140,10 +120,11 @@ export function MainPanel({ children, isLoading, channelId }: MainPanelProps) {
           <div className="flex flex-col space-y-2">
             {previewUrl && (
               <div className="relative w-full max-w-[300px] aspect-video">
-                <img
+                <Image
                   src={previewUrl}
                   alt="Upload preview"
-                  className="rounded-md object-contain w-full h-full"
+                  fill
+                  className="rounded-md object-contain"
                 />
               </div>
             )}

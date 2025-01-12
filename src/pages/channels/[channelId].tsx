@@ -36,7 +36,7 @@ export default function ChannelPage() {
     }
 
     fetchChannel()
-  }, [channelId])
+  }, [channelId, supabase])
 
   return (
     <AppLayout 

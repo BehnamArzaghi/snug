@@ -3,7 +3,6 @@ import { Bell, Search } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useRouter } from 'next/router';
 import { ChannelMembers } from '@/components/channels/ChannelMembers';
 import { useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +20,6 @@ type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export function TopBar({ channelName, channelId }: TopBarProps) {
   const { user, signOut } = useAuth();
-  const router = useRouter();
   const supabase = useSupabaseClient<Database>();
   const { toast } = useToast();
   const { presenceStatus } = usePresence();
@@ -99,8 +97,9 @@ export function TopBar({ channelName, channelId }: TopBarProps) {
       })
       .subscribe();
 
+    // Cleanup subscription on unmount
     return () => {
-      channel.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [user?.id, supabase, toast]);
 
