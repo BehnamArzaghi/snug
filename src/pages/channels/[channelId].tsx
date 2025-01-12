@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { supabase } from '@/lib/supabase'
+import { useSupabaseClient } from '@supabase/auth-helpers-react'
 import type { Database } from '@/lib/database.types'
 import { AppLayout } from '@/components/layout/AppLayout'
 
@@ -12,6 +12,7 @@ export default function ChannelPage() {
   const [channel, setChannel] = useState<Channel | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const supabase = useSupabaseClient<Database>()
 
   useEffect(() => {
     if (!channelId) return

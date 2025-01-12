@@ -15,7 +15,7 @@ export function AppLayout({ children, isLoading, channelName, channelId }: AppLa
     <div className="flex h-screen overflow-hidden">
       <Sidebar className="flex-shrink-0" />
       <div className="flex flex-1 flex-col">
-        <TopBar channelName={channelName} />
+        <TopBar channelName={channelName} channelId={channelId} />
         <div className="flex-1 overflow-hidden">
           <MainPanel isLoading={isLoading} channelId={channelId}>
             {children}

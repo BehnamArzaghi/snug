@@ -14,9 +14,14 @@ interface UseAutoScrollOptions {
 
 export function useAutoScroll(options: UseAutoScrollOptions = {}) {
   const { offset = 20, smooth = false, content } = options;
+  const [isMounted, setIsMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastContentHeight = useRef(0);
   const userHasScrolled = useRef(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const [scrollState, setScrollState] = useState<ScrollState>({
     isAtBottom: true,
@@ -127,9 +132,9 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}) {
 
   return {
     scrollRef,
-    isAtBottom: scrollState.isAtBottom,
-    autoScrollEnabled: scrollState.autoScrollEnabled,
-    scrollToBottom: () => scrollToBottom(false),
-    disableAutoScroll,
+    isAtBottom: isMounted && scrollState.isAtBottom,
+    autoScrollEnabled: isMounted && scrollState.autoScrollEnabled,
+    scrollToBottom: isMounted ? () => scrollToBottom(false) : () => {},
+    disableAutoScroll: isMounted ? disableAutoScroll : () => {},
   };
 }

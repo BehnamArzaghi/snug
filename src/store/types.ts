@@ -1,13 +1,25 @@
-export interface Message {
+import type { Database } from '@/lib/database.types';
+
+export type Message = {
   id: string;
   content: string;
   channel_id: string;
   user_id: string;
+  file_url: string | null;
   created_at: string;
-  updated_at: string;
-  parent_message_id?: string;
-  file_url?: string;
-}
+  attachment_path: string | null;
+  edited_at: string | null;
+  edited_by: string | null;
+  parent_message_id: string | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    avatar_url: string | null;
+    created_at: string;
+    last_seen: string | null;
+  };
+};
 
 export interface MessageState {
   messages: Record<string, Message>;

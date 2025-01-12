@@ -1,10 +1,11 @@
-import { ReactNode, useState, KeyboardEvent, useEffect } from 'react';
+import { ReactNode, useState, KeyboardEvent, useEffect, useRef, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImagePlus, Send } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { MessageList } from '@/components/messages/MessageList';
+import { useMessageOperations } from '@/hooks/useMessageOperations';
+import { toast } from 'sonner';
 
 interface MainPanelProps {
   children?: ReactNode;
@@ -12,76 +13,95 @@ interface MainPanelProps {
   channelId?: string;
 }
 
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Sanitize filename to remove special characters and spaces
+const sanitizeFileName = (fileName: string): string => {
+  const sanitized = fileName
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[·]/g, '-')
+    .replace(/[^a-zA-Z0-9.-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  
+  const MAX_LENGTH = 100;
+  const extension = sanitized.split('.').pop() || '';
+  const nameWithoutExt = sanitized.slice(0, sanitized.lastIndexOf('.'));
+  
+  if (sanitized.length > MAX_LENGTH) {
+    return `${nameWithoutExt.slice(0, MAX_LENGTH - extension.length - 1)}.${extension}`;
+  }
+  
+  return sanitized;
+};
+
 export function MainPanel({ children, isLoading, channelId }: MainPanelProps) {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { sendMessage } = useMessageOperations(channelId || '');
 
-  // Debug auth state
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Auth state:', { 
-        isAuthenticated: !!user,
-        userId: user?.id,
-        hasSession: !!session,
-        sessionUserId: session?.user?.id
-      });
-    };
-    checkSession();
-  }, [user]);
+  // Clear preview and uploaded URL when message sends successfully
+  const clearFileStates = () => {
+    setPreviewUrl(null);
+    setUploadedUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-  const sendMessage = async () => {
-    console.log('Send attempt:', { 
-      message, 
-      userId: user?.id,
-      channelId,
-      isAuthenticated: !!user
-    });
-    if (!message.trim() || !user || !channelId) {
-      console.log('Send blocked:', { 
-        hasMessage: !!message.trim(), 
-        hasUser: !!user, 
-        hasChannelId: !!channelId,
-        userId: user?.id 
-      });
+  const handleFileSelect = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !channelId) return;
+
+    // Validate file type
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      toast.error('Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).');
       return;
     }
 
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File too large. Maximum size is 5MB.');
+      return;
+    }
+
+    // Create preview
+    const preview = URL.createObjectURL(file);
+    setPreviewUrl(preview);
+
+    setIsUploading(true);
+    try {
+      // TODO: Move file upload logic to a separate hook (useFileUpload)
+      // For now, we'll just handle text messages
+      toast.error('File uploads coming soon!');
+      setPreviewUrl(null);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload image. Please try again.');
+      setPreviewUrl(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!channelId || !message.trim()) return;
+
     setIsSending(true);
     try {
-      console.log('Sending to Supabase:', {
-        content: message.trim(),
-        channel_id: channelId,
-        user_id: user.id
-      });
-      
-      const { error } = await supabase
-        .from('messages')
-        .insert([
-          {
-            content: message.trim(),
-            channel_id: channelId,
-            user_id: user.id
-          }
-        ]);
-
-      if (error) {
-        console.error('Supabase error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details
-        });
-        throw error;
-      }
-      console.log('Message sent successfully');
+      await sendMessage(message);
       setMessage('');
-    } catch (e) {
-      console.error('Error sending message:', {
-        error: e,
-        errorMessage: e instanceof Error ? e.message : 'Unknown error',
-        errorStack: e instanceof Error ? e.stack : undefined
-      });
+      clearFileStates();
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -90,13 +110,21 @@ export function MainPanel({ children, isLoading, channelId }: MainPanelProps) {
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
+  // Clean up object URL on unmount or when preview changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   return (
     <div className="flex h-full flex-col">
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="flex h-full items-center justify-center">
@@ -107,39 +135,52 @@ export function MainPanel({ children, isLoading, channelId }: MainPanelProps) {
         ) : children}
       </div>
 
-      {/* Message Input */}
       {channelId && (
         <div className="border-t p-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => {
-                // TODO: Implement file upload
-              }}
-            >
-              <ImagePlus className="h-5 w-5 text-muted-foreground" />
-            </Button>
-            <Input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="flex-1"
-              disabled={isSending}
-            />
-            <Button
-              size="icon"
-              className="shrink-0"
-              onClick={sendMessage}
-              disabled={isSending || !message.trim()}
-            >
-              <Send className="h-5 w-5" />
-            </Button>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Press Enter to send, Shift + Enter for new line
+          <div className="flex flex-col space-y-2">
+            {previewUrl && (
+              <div className="relative w-full max-w-[300px] aspect-video">
+                <img
+                  src={previewUrl}
+                  alt="Upload preview"
+                  className="rounded-md object-contain w-full h-full"
+                />
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept={ALLOWED_FILE_TYPES.join(',')}
+                onChange={handleFileSelect}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading || isSending}
+              >
+                <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              </Button>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={isUploading ? 'Uploading image...' : 'Type a message...'}
+                className="flex-1"
+                disabled={isSending || isUploading}
+              />
+              <Button
+                size="icon"
+                className="shrink-0"
+                onClick={handleSendMessage}
+                disabled={(!message.trim() && !uploadedUrl) || isSending || isUploading}
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

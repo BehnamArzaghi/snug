@@ -1,41 +1,86 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase'
+'use client';
+
+import { useState, useCallback, memo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import type { Database } from '@/lib/database.types';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { toast } from 'sonner';
+import { useChannelOperations } from '@/hooks/useChannel';
 
 interface CreateChannelDialogProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function CreateChannelDialog({ isOpen, onClose }: CreateChannelDialogProps) {
-  const [channelName, setChannelName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export const CreateChannelDialog = memo(function CreateChannelDialog({ 
+  isOpen, 
+  onClose 
+}: CreateChannelDialogProps) {
+  const { user } = useAuth();
+  const supabase = useSupabaseClient<Database>();
+  const { setChannels, channels } = useChannelOperations();
+  
+  const [channelName, setChannelName] = useState('');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast.error('You must be logged in to create a channel');
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const { error } = await supabase
+      // Create channel
+      const { data: channel, error: channelError } = await supabase
         .from('channels')
-        .insert([{ name: channelName }])
+        .insert([{ 
+          name: channelName,
+          is_private: isPrivate 
+        }])
+        .select()
+        .single();
 
-      if (error) throw error
+      if (channelError) throw channelError;
       
-      setChannelName('')
-      onClose()
-    } catch (e) {
-      setError('Failed to create channel')
-      console.error('Error creating channel:', e)
-    } finally {
-      setLoading(false)
-    }
-  }
+      // If private, add creator as admin
+      if (isPrivate && channel) {
+        const { error: memberError } = await supabase
+          .from('channel_members')
+          .insert([{
+            channel_id: channel.id,
+            user_id: user.id,
+            role: 'admin'
+          }]);
 
-  if (!isOpen) return null
+        if (memberError) throw memberError;
+      }
+
+      // Update local store
+      if (channel) {
+        setChannels([...channels, channel]);
+      }
+
+      toast.success('Channel created successfully');
+      setChannelName('');
+      setIsPrivate(false);
+      onClose();
+    } catch (error) {
+      console.error('Error creating channel:', error);
+      toast.error('Failed to create channel');
+    } finally {
+      setLoading(false);
+    }
+  }, [user, channelName, isPrivate, supabase, onClose, channels, setChannels]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -45,17 +90,30 @@ export function CreateChannelDialog({ isOpen, onClose }: CreateChannelDialogProp
         
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
+              <Label htmlFor="channel-name">Channel Name</Label>
               <Input
+                id="channel-name"
                 value={channelName}
                 onChange={(e) => setChannelName(e.target.value)}
-                placeholder="Channel name"
+                placeholder="e.g. project-updates"
                 required
               />
             </div>
 
-            {error && (
-              <div className="text-red-500 text-sm">{error}</div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="private"
+                checked={isPrivate}
+                onCheckedChange={setIsPrivate}
+              />
+              <Label htmlFor="private">Private Channel</Label>
+            </div>
+
+            {isPrivate && (
+              <p className="text-sm text-muted-foreground">
+                Private channels are only visible to their members
+              </p>
             )}
 
             <div className="flex justify-end space-x-2">
@@ -78,5 +136,5 @@ export function CreateChannelDialog({ isOpen, onClose }: CreateChannelDialogProp
         </form>
       </div>
     </div>
-  )
-} 
+  );
+}); 
