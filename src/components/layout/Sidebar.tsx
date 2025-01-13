@@ -1,72 +1,38 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Menu, X, Plus } from 'lucide-react';
-import { ChannelList } from '@/components/channels/ChannelList';
-import { CreateChannelDialog } from '@/components/channels/CreateChannelDialog';
 
-interface SidebarProps {
+interface SideBarProps {
   className?: string;
 }
 
-export function Sidebar({ className }: SidebarProps) {
-  const [isOpen, setIsOpen] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-
+export function SideBar({ className }: SideBarProps) {
   return (
-    <>
-      {/* Mobile Toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute left-4 top-3 z-40 lg:hidden"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </Button>
-
-      {/* Sidebar Content */}
-      <div
-        className={cn(
-          "fixed inset-y-0 left-0 z-30 w-64 transform bg-background transition-transform duration-200 ease-in-out lg:static lg:translate-x-0",
-          !isOpen && "-translate-x-full",
-          className
-        )}
-      >
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex h-14 items-center justify-between border-b px-4">
-            <h2 className="text-lg font-semibold">Channels</h2>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              title="Create Channel"
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
-              <Plus size={20} />
-            </Button>
-          </div>
-
-          {/* Channel List */}
-          <div className="flex-1 overflow-y-auto p-3">
-            <ChannelList />
-          </div>
-        </div>
+    <aside 
+      className={cn(
+        "w-64 h-full shrink-0",
+        "bg-gray-50 dark:bg-gray-900",
+        "border-r border-gray-200 dark:border-gray-800",
+        className
+      )}
+    >
+      {/* Channel section header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+        <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+          Channels
+        </h2>
       </div>
 
-      {/* Mobile Overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
-
-      {/* Create Channel Dialog */}
-      <CreateChannelDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-      />
-    </>
+      {/* Channel list placeholder */}
+      <div className="p-2">
+        <div className="space-y-1">
+          {/* Placeholder items */}
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-9 px-2 rounded-md animate-pulse bg-gray-200 dark:bg-gray-800"
+            />
+          ))}
+        </div>
+      </div>
+    </aside>
   );
-} 
+}

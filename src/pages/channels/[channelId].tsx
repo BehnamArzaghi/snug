@@ -1,56 +1,51 @@
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
-import { useSupabaseClient } from '@supabase/auth-helpers-react'
-import type { Database } from '@/lib/database.types'
-import { AppLayout } from '@/components/layout/AppLayout'
-
-type Channel = Database['public']['Tables']['channels']['Row']
+import { useRouter } from 'next/router';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { useChannelOperations } from '@/features/channels/useChannelOperations';
+import { useChannels } from '@/features/channels/useChannels';
+import { MessageList } from '@/features/messages/MessageList';
+import { MessageInput } from '@/features/messages/MessageInput';
+import { useEffect } from 'react';
 
 export default function ChannelPage() {
-  const router = useRouter()
-  const { channelId } = router.query
-  const [channel, setChannel] = useState<Channel | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const supabase = useSupabaseClient<Database>()
+  const router = useRouter();
+  const { channelId } = router.query;
+
+  const { setActiveChannel } = useChannelOperations();
+  const { activeChannel, isLoading, error } = useChannels();
 
   useEffect(() => {
-    if (!channelId) return
-
-    const fetchChannel = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('channels')
-          .select('*')
-          .eq('id', channelId)
-          .single()
-
-        if (error) throw error
-        setChannel(data)
-      } catch (e) {
-        setError('Failed to load channel')
-        console.error('Error loading channel:', e)
-      } finally {
-        setLoading(false)
-      }
+    if (typeof channelId === 'string') {
+      setActiveChannel(channelId);
     }
-
-    fetchChannel()
-  }, [channelId, supabase])
+  }, [channelId, setActiveChannel]);
 
   return (
-    <AppLayout 
-      isLoading={loading} 
-      channelName={channel?.name}
-      channelId={typeof channelId === 'string' ? channelId : undefined}
-    >
-      {error ? (
-        <div className="p-4 text-red-500">{error}</div>
-      ) : (
+    <AppLayout>
+      {isLoading ? (
+        <div className="p-4">Loading channel...</div>
+      ) : error ? (
+        <div className="p-4 text-red-500">Error: {error}</div>
+      ) : activeChannel ? (
         <div className="flex flex-col h-full">
-          {/* Messages will be rendered by MainPanel */}
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+            <h1 className="text-xl font-semibold">
+              #{activeChannel.name}
+            </h1>
+            {activeChannel.description && (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {activeChannel.description}
+              </p>
+            )}
+          </div>
+          {/* Messages + input */}
+          <div className="flex-1 overflow-y-auto">
+            <MessageList channelId={activeChannel.id} />
+          </div>
+          <MessageInput channelId={activeChannel.id} />
         </div>
+      ) : (
+        <div className="p-4 text-gray-500">No channel selected</div>
       )}
     </AppLayout>
-  )
+  );
 } 

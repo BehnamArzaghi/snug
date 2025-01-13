@@ -1,26 +1,24 @@
 import { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
+import { SideBar } from './SideBar';
 import { MainPanel } from './MainPanel';
+import { cn } from '@/lib/utils';
 
 interface AppLayoutProps {
-  children?: ReactNode;
-  isLoading?: boolean;
-  channelName?: string;
-  channelId?: string;
+  children: ReactNode;
+  className?: string;
 }
 
-export function AppLayout({ children, isLoading, channelName, channelId }: AppLayoutProps) {
+export function AppLayout({ children, className }: AppLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar className="flex-shrink-0" />
-      <div className="flex flex-1 flex-col">
-        <TopBar channelName={channelName} channelId={channelId} />
-        <div className="flex-1 overflow-hidden">
-          <MainPanel isLoading={isLoading} channelId={channelId}>
-            {children}
-          </MainPanel>
-        </div>
+    <div className={cn("flex h-screen flex-col", className)}>
+      <TopBar />
+      
+      <div className="flex-1 flex overflow-hidden">
+        <SideBar />
+        <MainPanel>
+          {children}
+        </MainPanel>
       </div>
     </div>
   );
